@@ -70,6 +70,8 @@ jobs:
           
           node -e '
             const fs = require("fs");
+            const path = require("path");
+
             let manifestPath = "./extension/manifest.json";
             let manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
             
@@ -86,15 +88,24 @@ jobs:
 
             fs.writeFileSync("manifest.json", JSON.stringify(manifest, null, 2));
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-          '
 
-          if [ -f .excluded_assets ]; then
-            while IFS= read -r file; do
-              [[ -z "$file" \vert{}\vert{} "$file" =~ ^# ]] && continue
-              echo "Removing: $file"
-              rm -rf "./extension/$file" "$file"
-            done < .excluded_assets
-          fi
+            if (fs.existsSync(".excluded_assets")) {
+              const lines = fs.readFileSync(".excluded_assets", "utf8").split("\n");
+              for (let line of lines) {
+                line = line.trim();
+                if (!line || line.startsWith("#")) continue;
+                
+                const targetInExtension = path.join("./extension", line);
+                console.log("Removing: " + line);
+                if (fs.existsSync(targetInExtension)) {
+                  fs.rmSync(targetInExtension, { recursive: true, force: true });
+                }
+                if (fs.existsSync(line)) {
+                  fs.rmSync(line, { recursive: true, force: true });
+                }
+              }
+            }
+          '
 
       - name: Autonomous Keep-Only-English Locales Scanner
         if: env.SKIP != 'true'

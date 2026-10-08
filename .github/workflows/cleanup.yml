@@ -17,7 +17,6 @@ jobs:
       actions: write
       contents: write
       pull-requests: write
-      packages: write
 
     steps:
       - name: Clear GitHub Actions build cache
@@ -27,12 +26,6 @@ jobs:
         run: |
           gh extension install actions/gh-actions-cache || true
           gh actions-cache delete --all -R "$REPO" --confirm || true
-
-      - name: Delete untagged container images (GHCR)
-        uses: vlaurin/action-ghcr-prune@v0.6.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          untagged-only: true
 
       - name: Delete merged branches via GitHub CLI
         env:

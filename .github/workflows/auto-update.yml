@@ -46,10 +46,8 @@ jobs:
           fi
 
           if [ "$UPSTREAM_VER" == "$BASE_RELEASE_VER" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "Новой версии upstream нет. Пропускаем сборку и отправку."
             echo "SKIP=true" >> $GITHUB_OUTPUT
           else
-            echo "Найдена новая версия upstream: $UPSTREAM_VER (предыдущая база: $BASE_RELEASE_VER)"
             echo "SKIP=false" >> $GITHUB_OUTPUT
           fi
 
@@ -68,7 +66,9 @@ jobs:
             }
             
             let runNum = process.env.GITHUB_RUN_NUMBER || "1";
-            let uniqueVer = `${parts.join(".")}.${runNum}`;
+            let attemptNum = process.env.GITHUB_RUN_ATTEMPT || "1";
+            
+            let uniqueVer = `${parts.join(".")}.${runNum}${attemptNum}`;
             
             fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);
             console.log(`Generated version: ${uniqueVer}`);

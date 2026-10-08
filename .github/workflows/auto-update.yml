@@ -65,16 +65,23 @@ jobs:
           npm ci --legacy-peer-deps || npm install
           node scripts/build-firefox.js || npm run build
 
-      - name: Prepare build files and update manifest version
+      - name: Prepare build files and patch manifest
         run: |
           rm -rf ./extension
           cp -r source-rovalra/dist-firefox ./extension
-
+          
           node -e '
             const fs = require("fs");
             const manifestPath = "./extension/manifest.json";
             const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+            
             manifest.version = process.env.VERSION;
+            manifest.browser_specific_settings = {
+              gecko: {
+                id: "rovalra-custom-port@raviannaivar.com"
+              }
+            };
+            
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
           '
           

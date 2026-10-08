@@ -35,13 +35,24 @@ jobs:
       - name: Check for new version
         id: check_version
         run: |
-          UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
-          
-          UNIQUE_VER="${UPSTREAM_VER}.${GITHUB_RUN_NUMBER}"
-          
-          echo "VERSION=$UNIQUE_VER" >> $GITHUB_ENV
-          echo "New valid Mozilla version generated: $UNIQUE_VER"
-          echo "SKIP=false" >> $GITHUB_ENV
+          node -e '
+            const fs = require("fs");
+            const pkg = require("./source-rovalra/package.json");
+            let upstreamVer = pkg.version;
+            
+            // Нормализуем версию в максимум 3 части, чтобы добавить ран четвёртой
+            let parts = upstreamVer.split(".").filter(Boolean);
+            if (parts.length > 3) {
+              parts = parts.slice(0, 3);
+            }
+            
+            let runNum = process.env.GITHUB_RUN_NUMBER || "1";
+            let uniqueVer = `${parts.join(".")}.${runNum}`;
+            
+            fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `SKIP=false\n`);
+            console.log(`Generated valid 4-part Mozilla version: ${uniqueVer}`);
+          '
 
       - name: Install dependencies & Build Firefox Extension
         if: env.SKIP != 'true'

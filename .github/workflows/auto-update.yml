@@ -65,16 +65,34 @@ jobs:
           npm ci --legacy-peer-deps || npm install
           node scripts/build-firefox.js || npm run build
 
-      - name: Prepare build files
+      - name: Prepare build files and update manifest version
         run: |
           rm -rf ./extension
           cp -r source-rovalra/dist-firefox ./extension
+
+          node -e '
+            const fs = require("fs");
+            const manifestPath = "./extension/manifest.json";
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+            manifest.version = process.env.VERSION;
+            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+          '
+          
           cd extension && zip -r ../extension.zip ./*
 
-      - name: Create Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "v${{ env.VERSION }}" extension.zip \
             --title "Release v${{ env.VERSION }}" \
             --notes "Automated build of RoValra extension version ${{ env.VERSION }}"
+
+      - name: Sign and Publish to Firefox Add-ons (AMO)
+        uses: w3c/action-web-ext@v1.3.0
+        with:
+          cmd: sign
+          sourceDir: ./extension
+          apiKey: ${{ secrets.AMO_JWT_ISSUER }}
+          apiSecret: ${{ secrets.AMO_JWT_SECRET }}
+          channel: listed

@@ -96,4 +96,5 @@ jobs:
             --source-dir ./extension \
             --api-key "$AMO_JWT_ISSUER" \
             --api-secret "$AMO_JWT_SECRET" \
-            --channel listed
+            --channel listed \
+            --approval-notes "Automated build of RoValra extension"

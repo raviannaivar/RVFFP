@@ -78,8 +78,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           days-before-stale: 30
           days-before-close: 7
-          stale-issue-message: 'Эта задача не обновлялась 30 дней и будет закрыта через 7 дней.'
-          stale-pr-message: 'Этот PR не обновлялся 30 дней и будет закрыт через 7 дней.'
 
       - name: Delete old artifacts
         uses: cfauster/action-delete-old-artifacts@v1

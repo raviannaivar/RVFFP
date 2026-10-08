@@ -88,6 +88,14 @@ jobs:
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
           '
 
+          if [ -f .excluded_assets ]; then
+            while IFS= read -r file; do
+              [[ -z "$file" \vert{}\vert{} "$file" =~ ^# ]] && continue
+              echo "Removing: $file"
+              rm -rf "./extension/$file" "$file"
+            done < .excluded_assets
+          fi
+
       - name: Autonomous Keep-Only-English Locales Scanner
         if: env.SKIP != 'true'
         run: |

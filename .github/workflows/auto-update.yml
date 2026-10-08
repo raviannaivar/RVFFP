@@ -31,14 +31,6 @@ jobs:
           rm -rf source-rovalra
           git clone https://github.com/NotValra/RoValra.git source-rovalra
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('source-rovalra/package-lock.json', 'source-rovalra/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Check for new version
         id: check_version
         run: |
@@ -96,10 +88,12 @@ jobs:
             --notes "Automated build of RoValra extension version ${{ env.VERSION }}"
 
       - name: Sign and Publish to Firefox Add-ons (AMO)
-        uses: w3c/action-web-ext@v1.3.0
-        with:
-          cmd: sign
-          sourceDir: ./extension
-          apiKey: ${{ secrets.AMO_JWT_ISSUER }}
-          apiSecret: ${{ secrets.AMO_JWT_SECRET }}
-          channel: listed
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx web-ext sign \
+            --source-dir ./extension \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET" \
+            --channel listed

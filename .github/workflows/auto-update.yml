@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-release:
     if: github.actor != 'github-actions[bot]'
@@ -25,29 +29,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
       - name: Clone original RoValra repo
         run: |
           rm -rf source-rovalra
           git clone https://github.com/NotValra/RoValra.git source-rovalra
 
-      - name: Check for new upstream version
+      - name: Check for upstream version changes
         id: check_version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
-          LATEST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "none")
-
-          if [ "$LATEST_RELEASE" != "none" ]; then
-            BASE_RELEASE_VER=$(echo "$LATEST_RELEASE" | sed 's/^v//' | cut -d. -f1-3)
-          else
-            BASE_RELEASE_VER="none"
-          fi
-
+          LATEST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//' || echo "none")
+          
+          BASE_RELEASE_VER=$(echo "$LATEST_RELEASE" | cut -d. -f1-3)
+          
           if [ "$UPSTREAM_VER" == "$BASE_RELEASE_VER" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "No new upstream version ($UPSTREAM_VER). Skipping."
             echo "SKIP=true" >> $GITHUB_OUTPUT
           else
+            echo "Building version: $UPSTREAM_VER"
             echo "SKIP=false" >> $GITHUB_OUTPUT
           fi
 
@@ -68,7 +71,7 @@ jobs:
             let runNum = process.env.GITHUB_RUN_NUMBER || "1";
             let attemptNum = process.env.GITHUB_RUN_ATTEMPT || "1";
             
-            let uniqueVer = `${parts.join(".")}.${runNum}${attemptNum}`;
+            let uniqueVer = `${parts.join(".")}.${runNum}.${attemptNum}`;
             
             fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);
             console.log(`Generated version: ${uniqueVer}`);

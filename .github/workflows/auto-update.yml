@@ -40,7 +40,6 @@ jobs:
             const pkg = require("./source-rovalra/package.json");
             let upstreamVer = pkg.version;
             
-            // Нормализуем версию в максимум 3 части, чтобы добавить ран четвёртой
             let parts = upstreamVer.split(".").filter(Boolean);
             if (parts.length > 3) {
               parts = parts.slice(0, 3);

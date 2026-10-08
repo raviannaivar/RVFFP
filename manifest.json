@@ -4,6 +4,11 @@
   "version": "2.6.15.25",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "rovalra-custom-port@raviannaivar.com"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
@@ -65,77 +70,6 @@
     "*://*.roblox.com/*",
     "https://gamejoin.roblox.com/v1/join-game-instance",
     "https://users.roblox.com/*",
-    "*://*.rovalra.com/*",
-    "*://*.rbxcdn.com/*"
-  ],
-  "background": {
-    "scripts": [
-      "firefox-background-compat.js",
-      "background.js"
-    ]
-  },
-  "optional_permissions": [
-    "webRequest"
-  ],
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "ruleset_status",
-        "enabled": false,
-        "path": "public/Assets/Rules/StatusRules.json"
-      },
-      {
-        "id": "ruleset_3",
-        "enabled": false,
-        "path": "public/Assets/Rules/beta-rules.json"
-      }
-    ]
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "public/Assets/*",
-        "public/data/*",
-        "Assets/data/serverid_extractor.js",
-        "data/*",
-        "intercept.js",
-        "assets/*",
-        "css/*"
-      ],
-      "matches": [
-        "https://www.roblox.com/*",
-        "*://*.roblox.com/*"
-      ]
-    }
-  ],
-  "action": {
-    "default_popup": "public/Assets/popup/popup.html",
-    "default_icon": {
-      "16": "public/Assets/icon-16.png",
-      "48": "public/Assets/icon-48.png",
-      "128": "public/Assets/icon-128.png"
-    }
-  },
-  "icons": {
-    "16": "public/Assets/icon-16.png",
-    "48": "public/Assets/icon-48.png",
-    "128": "public/Assets/icon-128.png"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "rovalra-custom-port@raviannaivar.com",
-      "strict_min_version": "140.0",
-      "data_collection_permissions": {
-        "required": [
-          "authenticationInfo",
-          "personallyIdentifyingInfo",
-          "websiteContent"
-        ]
-      },
-      "update_url": "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json"
-    },
-    "gecko_android": {
-      "strict_min_version": "142.0"
-    }
-  }
+    "*://*.rovalra.com/*"
+  ]
 }

@@ -29,7 +29,7 @@ jobs:
           gh actions-cache delete --all -R "$REPO" --confirm || true
 
       - name: Delete untagged container images (GHCR)
-        uses: Chocobo1/cleanup-ghcr-actions@v0.6.0
+        uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           untagged-only: true
@@ -80,10 +80,10 @@ jobs:
           days-before-close: 7
 
       - name: Delete old artifacts
-        uses: cfauster/action-delete-old-artifacts@v1
+        uses: c-hive/gha-remove-artifacts@v1
         with:
-          older-than: '14 days'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          age: '14 days'
+          skip-recent: 5
 
       - name: Delete old workflow runs
         uses: Mattraks/delete-workflow-runs@v2

@@ -77,5 +77,4 @@ jobs:
         run: |
           gh release create "v${{ env.VERSION }}" extension.zip \
             --title "Release v${{ env.VERSION }}" \
-            --notes "Automated build of RoValra extension version ${{ env.VERSION }}" \
-            --clobber
+            --notes "Automated build of RoValra extension version ${{ env.VERSION }}"

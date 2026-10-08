@@ -92,9 +92,11 @@ jobs:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
+          echo '{"version": {"license": "MIT"}}' > amo-metadata.json
+
           npx web-ext sign \
             --source-dir ./extension \
             --api-key "$AMO_JWT_ISSUER" \
             --api-secret "$AMO_JWT_SECRET" \
             --channel listed \
-            --approval-notes "Automated build of RoValra extension"
+            --amo-metadata ./amo-metadata.json

@@ -37,11 +37,11 @@ jobs:
         run: |
           UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
           
-          DATE_SUFFIX=$(date +%Y%m%d)
-          UNIQUE_VER="${UPSTREAM_VER}.${DATE_SUFFIX}.${GITHUB_RUN_NUMBER}"
+          CLEAN_VER=$(echo "$UPSTREAM_VER" | tr -d '.' | tr -d '-')
+          UNIQUE_VER="${CLEAN_VER}.${GITHUB_RUN_NUMBER}"
           
           echo "VERSION=$UNIQUE_VER" >> $GITHUB_ENV
-          echo "New unique version generated: v$UNIQUE_VER"
+          echo "New valid Mozilla version generated: $UNIQUE_VER"
           echo "SKIP=false" >> $GITHUB_ENV
 
       - name: Install dependencies & Build Firefox Extension

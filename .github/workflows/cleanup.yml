@@ -5,9 +5,14 @@ on:
     - cron: '0 0 * * 0'
   workflow_dispatch:
 
+concurrency:
+  group: cleanup-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       actions: write
       contents: write
@@ -29,10 +34,22 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           untagged-only: true
 
-      - name: Delete merged git branches
-        uses: Smee23/delete-merged-branches@v2
+      - name: Delete merged branches via GitHub CLI
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          DEFAULT_BRANCH=$(gh api "repos/$REPO" --jq '.default_branch')
+          
+          gh api "repos/$REPO/branches" --paginate --jq '.[].name' | while read -r BRANCH; do
+            if [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then
+              IS_MERGED=$(gh api "repos/$REPO/compare/$DEFAULT_BRANCH...$BRANCH" --jq '.ahead_by')
+              if [ "$IS_MERGED" -eq 0 ]; then
+                echo "Deleting merged branch: $BRANCH"
+                gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || true
+              fi
+            fi
+          done
 
       - name: Prune unreachable git objects
         env:

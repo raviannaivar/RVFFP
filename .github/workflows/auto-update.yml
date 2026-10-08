@@ -36,24 +36,13 @@ jobs:
         id: check_version
         run: |
           UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
-          LOCAL_VER=$(node -p "require('./manifest.json').version")
           
-          HIGHER_VER=$(node -e "
-            const v1 = '$UPSTREAM_VER';
-            const v2 = '$LOCAL_VER';
-            const cmp = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-            console.log(cmp(v1, v2) > 0 ? v1 : v2);
-          ")
-
-          echo "VERSION=$HIGHER_VER" >> $GITHUB_ENV
+          DATE_SUFFIX=$(date +%Y%m%d)
+          UNIQUE_VER="${UPSTREAM_VER}.${DATE_SUFFIX}.${GITHUB_RUN_NUMBER}"
           
-          if git rev-parse "v$HIGHER_VER" >/dev/null 2>&1; then
-            echo "Version v$HIGHER_VER already released. Skipping build."
-            echo "SKIP=true" >> $GITHUB_ENV
-          else
-            echo "New version detected: v$HIGHER_VER"
-            echo "SKIP=false" >> $GITHUB_ENV
-          fi
+          echo "VERSION=$UNIQUE_VER" >> $GITHUB_ENV
+          echo "New unique version generated: v$UNIQUE_VER"
+          echo "SKIP=false" >> $GITHUB_ENV
 
       - name: Install dependencies & Build Firefox Extension
         if: env.SKIP != 'true'

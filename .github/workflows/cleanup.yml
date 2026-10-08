@@ -40,7 +40,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           DEFAULT_BRANCH=$(gh api "repos/$REPO" --jq '.default_branch')
-          
+
           gh api "repos/$REPO/branches" --paginate --jq '.[].name' | while read -r BRANCH; do
             if [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then
               IS_MERGED=$(gh api "repos/$REPO/compare/$DEFAULT_BRANCH...$BRANCH" --jq '.ahead_by')
@@ -63,13 +63,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          RELEASE_TAGS=$(gh api "repos/$REPO/releases?per_page=100" --paginate --jq '.[].tag_name')
-          ALL_TAGS=$(gh api "repos/$REPO/tags?per_page=100" --paginate --jq '.[].name')
-          
-          for TAG in $ALL_TAGS; do
-            if ! echo "$RELEASE_TAGS" | grep -qx "$TAG"; then
-              gh api -X DELETE "repos/$REPO/git/refs/tags/$TAG" || true
-            fi
+          gh api "repos/$REPO/releases?per_page=100" --paginate --jq '.[].tag_name' | sort -u > /tmp/release_tags
+          gh api "repos/$REPO/tags?per_page=100"     --paginate --jq '.[].name'     | sort -u > /tmp/all_tags
+
+          comm -23 /tmp/all_tags /tmp/release_tags | while read -r TAG; do
+            [ -z "$TAG" ] && continue
+            echo "Deleting tag without release: $TAG"
+            gh api -X DELETE "repos/$REPO/git/refs/tags/$TAG" || true
           done
 
       - name: Close stale issues and PRs

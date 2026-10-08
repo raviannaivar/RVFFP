@@ -1,0 +1,2 @@
+- [Latest Release (`.xpi` / `.zip`)](https://github.com/raviannaivar/RVFFP/releases)
+- [Action Logs](https://github.com/raviannaivar/RVFFP/actions)

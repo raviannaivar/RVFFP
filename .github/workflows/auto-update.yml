@@ -5,7 +5,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 0 * * *'
 
 permissions:
   contents: write
@@ -31,8 +31,31 @@ jobs:
           rm -rf source-rovalra
           git clone https://github.com/NotValra/RoValra.git source-rovalra
 
-      - name: Check for new version
+      - name: Check for new upstream version
         id: check_version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
+          LATEST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "none")
+
+          if [ "$LATEST_RELEASE" != "none" ]; then
+            BASE_RELEASE_VER=$(echo "$LATEST_RELEASE" | sed 's/^v//' | cut -d. -f1-3)
+          else
+            BASE_RELEASE_VER="none"
+          fi
+
+          if [ "$UPSTREAM_VER" == "$BASE_RELEASE_VER" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "Новой версии upstream нет. Пропускаем сборку и отправку."
+            echo "SKIP=true" >> $GITHUB_OUTPUT
+          else
+            echo "Найдена новая версия upstream: $UPSTREAM_VER (предыдущая база: $BASE_RELEASE_VER)"
+            echo "SKIP=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate custom version
+        if: steps.check_version.outputs.SKIP != 'true'
+        id: generate_version
         run: |
           node -e '
             const fs = require("fs");
@@ -52,12 +75,14 @@ jobs:
           '
 
       - name: Install dependencies & Build Firefox Extension
+        if: steps.check_version.outputs.SKIP != 'true'
         run: |
           cd source-rovalra
           npm ci --legacy-peer-deps || npm install
           node scripts/build-firefox.js || npm run build
 
       - name: Prepare build files and patch manifest
+        if: steps.check_version.outputs.SKIP != 'true'
         run: |
           rm -rf ./extension
           cp -r source-rovalra/dist-firefox ./extension
@@ -80,6 +105,7 @@ jobs:
           cd extension && zip -r ../extension.zip ./*
 
       - name: Sign Extension with Mozilla (Unlisted)
+        if: steps.check_version.outputs.SKIP != 'true'
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
@@ -95,6 +121,7 @@ jobs:
           cp extension.zip ./release-assets/extension.zip
 
       - name: Create GitHub Release
+        if: steps.check_version.outputs.SKIP != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

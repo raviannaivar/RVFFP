@@ -9,10 +9,9 @@ on:
 
 permissions:
   contents: write
-  issues: write
 
 jobs:
-  build-and-sign:
+  build-and-release:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
@@ -26,6 +25,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'source-rovalra/package-lock.json'
 
       - name: Clone original RoValra repo
         run: |
@@ -49,192 +50,26 @@ jobs:
             let uniqueVer = `${parts.join(".")}.${runNum}`;
             
             fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);
-            fs.appendFileSync(process.env.GITHUB_ENV, `SKIP=false\n`);
-            console.log(`Generated valid 4-part Mozilla version: ${uniqueVer}`);
+            console.log(`Generated version: ${uniqueVer}`);
           '
 
       - name: Install dependencies & Build Firefox Extension
-        if: env.SKIP != 'true'
         run: |
           cd source-rovalra
           npm ci --legacy-peer-deps || npm install
           node scripts/build-firefox.js || npm run build
 
-      - name: Prepare build files and update manifest
-        if: env.SKIP != 'true'
+      - name: Prepare build files
         run: |
           rm -rf ./extension
           cp -r source-rovalra/dist-firefox ./extension
-          
-          node -e '
-            const fs = require("fs");
-            const path = require("path");
+          cd extension && zip -r ../extension.zip ./*
 
-            let manifestPath = "./extension/manifest.json";
-            let manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-            
-            manifest.version = process.env.VERSION;
-            
-            if (!manifest.browser_specific_settings) manifest.browser_specific_settings = {};
-            if (!manifest.browser_specific_settings.gecko) manifest.browser_specific_settings.gecko = {};
-            
-            manifest.browser_specific_settings.gecko.id = "rovalra-custom-port@raviannaivar.com";
-            manifest.browser_specific_settings.gecko.update_url = "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json";
-            manifest.browser_specific_settings.gecko.data_collection_permissions = { 
-              required: ["authenticationInfo", "personallyIdentifyingInfo", "websiteContent"] 
-            };
-
-            fs.writeFileSync("manifest.json", JSON.stringify(manifest, null, 2));
-            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-
-            if (fs.existsSync(".excluded_assets")) {
-              const lines = fs.readFileSync(".excluded_assets", "utf8").split("\n");
-              for (let line of lines) {
-                line = line.trim();
-                if (!line || line.startsWith("#")) continue;
-                
-                const targetInExtension = path.join("./extension", line);
-                console.log("Removing: " + line);
-                if (fs.existsSync(targetInExtension)) {
-                  fs.rmSync(targetInExtension, { recursive: true, force: true });
-                }
-                if (fs.existsSync(line)) {
-                  fs.rmSync(line, { recursive: true, force: true });
-                }
-              }
-            }
-          '
-
-      - name: Autonomous Keep-Only-English Locales Scanner
-        if: env.SKIP != 'true'
-        run: |
-          node -e '
-            const fs = require("fs");
-            const path = require("path");
-
-            const allowedLocales = [
-              "en", "en_US", "en_GB", "en-US", "en-GB", 
-              "english", "eng", "en-au", "en-ca", "en-nz", "en-za"
-            ];
-
-            const targetFolderNames = ["_locales", "locales", "locale", "lang", "languages", "i18n"];
-
-            const walkAndPurge = (dir) => {
-              if (!fs.existsSync(dir)) return;
-              
-              const entries = fs.readdirSync(dir, { withFileTypes: true });
-              for (let entry of entries) {
-                const fullPath = path.join(dir, entry.name);
-                
-                if (entry.isDirectory()) {
-                  if (targetFolderNames.includes(entry.name.toLowerCase())) {
-                    console.log(`[Autonomous Purge] Found locales container: ${fullPath}`);
-                    purgeLocaleContents(fullPath);
-                  } else {
-                    walkAndPurge(fullPath);
-                  }
-                }
-              }
-            };
-
-            const purgeLocaleContents = (localesDir) => {
-              const items = fs.readdirSync(localesDir);
-              items.forEach(item => {
-                const nameWithoutExt = path.parse(item).name.toLowerCase();
-                const rawName = item.toLowerCase();
-                
-                const isAllowed = allowedLocales.some(allowed => 
-                  rawName === allowed.toLowerCase() || nameWithoutExt === allowed.toLowerCase()
-                );
-
-                if (!isAllowed) {
-                  const targetPath = path.join(localesDir, item);
-                  console.log(`[Autonomous Purge] Removing foreign locale: ${targetPath}`);
-                  fs.rmSync(targetPath, { recursive: true, force: true });
-                }
-              });
-            };
-
-            console.log("[Autonomous Purge] Starting full-extension locale scan...");
-            walkAndPurge("./extension");
-            console.log("[Autonomous Purge] Locale cleanup completed successfully.");
-          '
-
-      - name: Sign extension via WebExt CLI
-        if: env.SKIP != 'true'
+      - name: Create Release
         env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          rm -rf ./signed-output
-          npx web-ext sign \
-            --source-dir ./extension \
-            --channel unlisted \
-            --api-key "$AMO_JWT_ISSUER" \
-            --api-secret "$AMO_JWT_SECRET" \
-            --artifacts-dir ./signed-output \
-            --timeout 300000
-
-      - name: Prepare signed XPI
-        if: env.SKIP != 'true'
-        run: |
-          mv signed-output/*.xpi ./rovalra.xpi
-
-      - name: Create GitHub Release
-        if: env.SKIP != 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v${{ env.VERSION }}"
-          name: "Release v${{ env.VERSION }}"
-          files: rovalra.xpi
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update updates.json
-        if: env.SKIP != 'true'
-        run: |
-          node -e '
-            const fs = require("fs");
-            let updates = { addons: { "rovalra-custom-port@raviannaivar.com": { updates: [] } } };
-            try {
-              updates = JSON.parse(fs.readFileSync("updates.json", "utf8"));
-            } catch (e) {}
-
-            const version = process.env.VERSION;
-            const addonId = "rovalra-custom-port@raviannaivar.com";
-            
-            if (!updates.addons[addonId]) updates.addons[addonId] = { updates: [] };
-
-            updates.addons[addonId].updates = [{
-              version: version,
-              update_link: "https://github.com/raviannaivar/RVFFP/releases/latest/download/rovalra.xpi"
-            }];
-            
-            fs.writeFileSync("updates.json", JSON.stringify(updates, null, 2));
-          '
-
-      - name: Commit and push updated files safely
-        if: env.SKIP != 'true'
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json updates.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Auto-update version to v${{ env.VERSION }} [skip ci]"
-            git push origin main
-          else
-            echo "No changes to commit"
-          fi
-
-      - name: Notify on failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: 'Error Code 01',
-              body: `01: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-            })
+          gh release create "v${{ env.VERSION }}" extension.zip \
+            --title "Release v${{ env.VERSION }}" \
+            --notes "Automated build of RoValra extension version ${{ env.VERSION }}" \
+            --clobber

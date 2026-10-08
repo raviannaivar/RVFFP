@@ -37,8 +37,7 @@ jobs:
         run: |
           UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
           
-          CLEAN_VER=$(echo "$UPSTREAM_VER" | tr -d '.' | tr -d '-')
-          UNIQUE_VER="${CLEAN_VER}.${GITHUB_RUN_NUMBER}"
+          UNIQUE_VER="${UPSTREAM_VER}.${GITHUB_RUN_NUMBER}"
           
           echo "VERSION=$UNIQUE_VER" >> $GITHUB_ENV
           echo "New valid Mozilla version generated: $UNIQUE_VER"

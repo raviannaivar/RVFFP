@@ -25,13 +25,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: 'source-rovalra/package-lock.json'
 
       - name: Clone original RoValra repo
         run: |
           rm -rf source-rovalra
           git clone https://github.com/NotValra/RoValra.git source-rovalra
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('source-rovalra/package-lock.json', 'source-rovalra/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Check for new version
         id: check_version

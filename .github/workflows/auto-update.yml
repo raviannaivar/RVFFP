@@ -79,24 +79,25 @@ jobs:
           
           cd extension && zip -r ../extension.zip ./*
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ env.VERSION }}" extension.zip \
-            --title "Release v${{ env.VERSION }}" \
-            --notes "Automated build of RoValra extension version ${{ env.VERSION }}"
-
-      - name: Sign and Publish to Firefox Add-ons (AMO)
+      - name: Sign Extension with Mozilla (Unlisted)
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
-          echo '{"version": {"license": "MIT"}}' > amo-metadata.json
-
           npx web-ext sign \
             --source-dir ./extension \
             --api-key "$AMO_JWT_ISSUER" \
             --api-secret "$AMO_JWT_SECRET" \
-            --channel listed \
-            --amo-metadata ./amo-metadata.json
+            --channel unlisted
+
+          mkdir -p ./release-assets
+          cp web-ext-artifacts/*.xpi ./release-assets/rovalra.xpi
+          cp extension.zip ./release-assets/extension.zip
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ env.VERSION }}" ./release-assets/* \
+            --title "Release v${{ env.VERSION }}" \
+            --notes "Automated build of RoValra extension version ${{ env.VERSION }}"

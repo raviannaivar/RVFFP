@@ -12,13 +12,13 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -37,6 +37,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'source-rovalra/package-lock.json'
+
+      - name: Install web-ext globally
+        run: npm install -g web-ext
 
       - name: Check for upstream version changes
         id: check_version
@@ -200,11 +203,12 @@ jobs:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
-          npx web-ext sign \
+          web-ext sign \
             --source-dir ./extension \
             --api-key "$AMO_JWT_ISSUER" \
             --api-secret "$AMO_JWT_SECRET" \
-            --channel unlisted
+            --channel unlisted \
+            --timeout 600000
 
           mkdir -p ./release-assets
           

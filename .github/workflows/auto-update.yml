@@ -150,6 +150,10 @@ jobs:
             
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
             console.log(`Successfully updated manifest.json to version ${newVersion}`);
+            
+            const rootManifestPath = "./manifest.json";
+            fs.writeFileSync(rootManifestPath, JSON.stringify(manifest, null, 2));
+            console.log(`Synced root manifest.json to version ${newVersion}`);
           '
           
           cd extension && zip -r -q ../extension.zip ./* -x "*.DS_Store" "*.git*"
@@ -187,13 +191,13 @@ jobs:
             console.log(`Successfully updated updates.json to version ${newVersion}`);
           '
 
-      - name: Commit and push updates.json
+      - name: Commit and push updates
         if: steps.check_version.outputs.SKIP != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add updates.json
-          git commit -m "update updates.json to v${{ env.VERSION }}" || echo "No changes to commit"
+          git add updates.json manifest.json
+          git commit -m "update updates.json and manifest.json to v${{ env.VERSION }}" || echo "No changes to commit"
           git pull --rebase origin main || true
           git push origin main || echo "Nothing to push"
 

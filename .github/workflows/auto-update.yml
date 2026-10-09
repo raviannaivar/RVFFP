@@ -90,8 +90,10 @@ jobs:
           rm -rf ./extension ./release-assets ./web-ext-artifacts
           cp -r source-rovalra/dist-firefox ./extension
           
-          find ./extension -type d \( -name "_locales" -o -name "locales" -o -name "lang" -o -name "languages" -o -name "i18n" \) | while read -r loc_dir; do
-            find "$loc_dir" -mindepth 1 -maxdepth 1 ! \(-name 'en*' -o -name 'eng*'\) -exec rm -rf {} +
+          for dir in _locales locales lang languages i18n; do
+            if [ -d "./extension/$dir" ]; then
+              find "./extension/$dir" -mindepth 1 -maxdepth 1 ! \(-name 'en*' -o -name 'eng*' -o -name 'english*'\) -exec rm -rf {} +
+            fi
           done
 
           node -e '

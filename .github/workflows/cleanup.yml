@@ -24,8 +24,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          gh extension install actions/gh-actions-cache || true
-          gh actions-cache delete --all -R "$REPO" --confirm || true
+          KEYS=$(gh api "repos/$REPO/actions/caches" --jq '.actions_caches[].key' 2>/devnull || true)
+          for KEY in $KEYS; do
+            echo "Deleting cache key: $KEY"
+            gh api -X DELETE "repos/$REPO/actions/caches?key=$KEY" || true
+          done
 
       - name: Delete merged branches via GitHub CLI
         env:
@@ -36,20 +39,13 @@ jobs:
 
           gh api "repos/$REPO/branches" --paginate --jq '.[].name' | while read -r BRANCH; do
             if [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then
-              IS_MERGED=$(gh api "repos/$REPO/compare/$DEFAULT_BRANCH...$BRANCH" --jq '.ahead_by')
+              IS_MERGED=$(gh api "repos/$REPO/compare/$DEFAULT_BRANCH...$BRANCH" --jq '.ahead_by' 2>/devnull || echo "1")
               if [ "$IS_MERGED" -eq 0 ]; then
                 echo "Deleting merged branch: $BRANCH"
                 gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || true
               fi
             fi
           done
-
-      - name: Prune unreachable git objects
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh api -X POST "repos/$REPO/git/gcb" || true
 
       - name: Delete tags without associated releases
         env:
@@ -73,10 +69,15 @@ jobs:
           days-before-close: 7
 
       - name: Delete old artifacts
-        uses: c-hive/gha-remove-artifacts@v1
-        with:
-          age: '14 days'
-          skip-recent: 5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          ARTIFACT_IDS=$(gh api "repos/$REPO/actions/artifacts" --jq '.artifacts[].id' 2>/devnull || true)
+          for ID in $ARTIFACT_IDS; do
+            echo "Deleting artifact ID: $ID"
+            gh api -X DELETE "repos/$REPO/actions/artifacts/$ID" || true
+          done
 
       - name: Delete old workflow runs
         uses: Mattraks/delete-workflow-runs@v2

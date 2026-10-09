@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
+    inputs:
+      keep:
+        description: 'How many recent releases to keep'
+        required: false
+        default: '5'
+        type: string
 
 permissions:
   contents: write
@@ -15,10 +21,19 @@ jobs:
       - name: Delete old releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEEP: ${{ inputs.keep || '5' }}
         run: |
-          echo "Fetching releases..."
-          gh release list --limit 100 --json tagName --jq '.[].tagName' | tail -n +6 | while read -r tag; do
-            echo "Deleting release $tag and its tag..."
-            gh release delete "$tag" --yes --cleanup-tag || true
-          done
+          set -euo pipefail
+          if ! [[ "$KEEP" =~ ^[0-9]+$ ]]; then
+            echo "Invalid keep value: $KEEP"
+            exit 1
+          fi
+
+          echo "Keeping the newest $KEEP releases."
+          gh release list --limit 500 --json tagName --jq '.[].tagName' \
+            | tail -n +$((KEEP + 1)) \
+            | while read -r tag; do
+                echo "Deleting release $tag and its tag..."
+                gh release delete "$tag" --yes --cleanup-tag || true
+              done
           echo "Cleanup complete."

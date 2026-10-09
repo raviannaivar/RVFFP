@@ -68,8 +68,7 @@ jobs:
             }
             
             let runNum = process.env.GITHUB_RUN_NUMBER || "1";
-            
-            // Формируем версию строго из 4 чисел: upstream + runNum
+           
             let uniqueVer = `${parts.join(".")}.${runNum}`;
             
             fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);

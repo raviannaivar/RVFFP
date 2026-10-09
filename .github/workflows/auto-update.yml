@@ -199,7 +199,7 @@ jobs:
             --api-key "$AMO_JWT_ISSUER" \
             --api-secret "$AMO_JWT_SECRET" \
             --channel unlisted \
-            --timeout 600000
+            --timeout 900000
 
           mkdir -p ./release-assets
           

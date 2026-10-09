@@ -59,6 +59,18 @@
       "all_frames": false
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "public/Assets/*",
+        "draco_decoder.js",
+        "css/*"
+      ],
+      "matches": [
+        "*://*.roblox.com/*"
+      ]
+    }
+  ],
   "permissions": [
     "declarativeNetRequest",
     "storage",

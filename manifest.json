@@ -7,9 +7,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "rovalra-custom-port@raviannaivar.com",
-      "data_collection_permissions": {
-        "required": ["none"]
-      }
+      "update_url": "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json"
     }
   },
   "content_scripts": [
@@ -18,13 +16,32 @@
         "*://*.roblox.com/*"
       ],
       "js": [
-        "firefox-event-replay.js",
-        "intercept.js",
-        "public/Assets/data/serverid_extractor.js"
+        "firefox-event-replay.js"
       ],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false
+    },
+    {
+      "matches": [
+        "*://*.roblox.com/*"
+      ],
+      "js": [
+        "intercept.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "*://*.roblox.com/*"
+      ],
+      "js": [
+        "public/Assets/data/serverid_extractor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     },
     {
       "matches": [
@@ -40,18 +57,6 @@
       ],
       "run_at": "document_start",
       "all_frames": false
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "public/Assets/*",
-        "draco_decoder.js",
-        "css/*"
-      ],
-      "matches": [
-        "*://*.roblox.com/*"
-      ]
     }
   ],
   "permissions": [

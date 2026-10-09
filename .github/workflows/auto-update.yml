@@ -116,6 +116,7 @@ jobs:
             manifest.browser_specific_settings = manifest.browser_specific_settings || {};
             manifest.browser_specific_settings.gecko = {
               id: "rovalra-custom-port@raviannaivar.com",
+              update_url: "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json",
               data_collection_permissions: {
                 required: ["none"]
               }
@@ -126,6 +127,48 @@ jobs:
           '
           
           cd extension && zip -r -q ../extension.zip ./* -x "*.DS_Store" "*.git*"
+
+      - name: Update updates.json
+        if: steps.check_version.outputs.SKIP != 'true'
+        run: |
+          node -e '
+            const fs = require("fs");
+            const updatesPath = "./updates.json";
+            const newVersion = process.env.VERSION;
+            const addonId = "rovalra-custom-port@raviannaivar.com";
+            const downloadUrl = "https://github.com/raviannaivar/RVFFP/releases/latest/download/rovalra.xpi";
+
+            let updatesData = { addons: {} };
+            if (fs.existsSync(updatesPath)) {
+              try {
+                updatesData = JSON.parse(fs.readFileSync(updatesPath, "utf8"));
+              } catch (e) {
+                console.error("Failed to parse existing updates.json, creating a new one.");
+              }
+            }
+
+            updatesData.addons = updatesData.addons || {};
+            updatesData.addons[addonId] = updatesData.addons[addonId] || { updates: [] };
+
+            updatesData.addons[addonId].updates = [
+              {
+                version: newVersion,
+                update_link: downloadUrl
+              }
+            ];
+
+            fs.writeFileSync(updatesPath, JSON.stringify(updatesData, null, 2));
+            console.log(`Successfully updated updates.json to version ${newVersion}`);
+          '
+
+      - name: Commit and push updates.json
+        if: steps.check_version.outputs.SKIP != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add updates.json
+          git commit -m "update updates.json to v${{ env.VERSION }}" || echo "No changes to commit"
+          git push origin main || echo "Nothing to push"
 
       - name: Sign Extension with Mozilla (Unlisted)
         if: steps.check_version.outputs.SKIP != 'true'

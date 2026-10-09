@@ -215,6 +215,18 @@ jobs:
             git push origin HEAD:main
           fi
 
+      - name: Check if version already released
+        if: steps.check_version.outputs.SKIP != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists. Aborting to avoid re-signing."
+            exit 1
+          fi
+          echo "Release v${VERSION} does not exist yet, proceeding."
+
       - name: Sign extension with Mozilla (unlisted)
         if: steps.check_version.outputs.SKIP != 'true'
         env:

@@ -97,19 +97,6 @@ jobs:
             const fs = require("fs");
             const path = require("path");
 
-            const locDirs = ["_locales", "locales", "lang", "languages", "i18n"];
-            locDirs.forEach(dirName => {
-              const fullPath = path.join("./extension", dirName);
-              if (fs.existsSync(fullPath)) {
-                fs.readdirSync(fullPath).forEach(file => {
-                  const lower = file.toLowerCase();
-                  if (!lower.startsWith("en") && !lower.startsWith("eng") && !lower.startsWith("english")) {
-                    fs.rmSync(path.join(fullPath, file), { recursive: true, force: true });
-                  }
-                });
-              }
-            });
-
             const localesPath = "./extension/_locales";
             if (fs.existsSync(localesPath)) {
               const defaultEnPath = path.join(localesPath, "en");

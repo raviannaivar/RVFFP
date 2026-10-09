@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "2.6.15.25",
+  "version": "2.6.16.82",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "browser_specific_settings": {
     "gecko": {
       "id": "rovalra-custom-port@raviannaivar.com",
-      "update_url": "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json"
+      "update_url": "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "content_scripts": [

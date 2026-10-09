@@ -98,10 +98,14 @@ jobs:
           else
             npm install
           fi
-          if [ -f scripts/build-firefox.js ]; then
+          npm run build
+          if [ ! -d dist-firefox ] && [ -f scripts/build-firefox.js ]; then
             node scripts/build-firefox.js
-          else
-            npm run build
+          fi
+          if [ ! -d dist-firefox ]; then
+            echo "Error: dist-firefox/ was not produced by the build."
+            ls -la
+            exit 1
           fi
 
       - name: Assemble extension and patch manifest

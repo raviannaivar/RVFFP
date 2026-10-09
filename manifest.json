@@ -15,63 +15,37 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*.roblox.com/*"
-      ],
-      "js": [
-        "firefox-event-replay.js"
-      ],
+      "matches": ["*://*.roblox.com/*"],
+      "js": ["firefox-event-replay.js"],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false
     },
     {
-      "matches": [
-        "*://*.roblox.com/*"
-      ],
-      "js": [
-        "intercept.js"
-      ],
+      "matches": ["*://*.roblox.com/*"],
+      "js": ["intercept.js"],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false
     },
     {
-      "matches": [
-        "*://*.roblox.com/*"
-      ],
-      "js": [
-        "public/Assets/data/serverid_extractor.js"
-      ],
+      "matches": ["*://*.roblox.com/*"],
+      "js": ["public/Assets/data/serverid_extractor.js"],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": [
-        "*://*.roblox.com/*"
-      ],
-      "js": [
-        "draco_decoder.js",
-        "content.js"
-      ],
-      "css": [
-        "css/sitewide.css",
-        "css/rovalra.css"
-      ],
+      "matches": ["*://*.roblox.com/*"],
+      "js": ["draco_decoder.js", "content.js"],
+      "css": ["css/sitewide.css", "css/rovalra.css"],
       "run_at": "document_start",
       "all_frames": false
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "public/Assets/*",
-        "draco_decoder.js",
-        "css/*"
-      ],
-      "matches": [
-        "*://*.roblox.com/*"
-      ]
+      "resources": ["public/Assets/*", "draco_decoder.js", "css/*"],
+      "matches": ["*://*.roblox.com/*"]
     }
   ],
   "permissions": [

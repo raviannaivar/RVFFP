@@ -1,222 +1,24 @@
-name: Clean
+name: Cleanup Old Releases
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ main ]
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  build-and-release:
-    if: github.actor != 'github-actions[bot]'
+  cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Clone original RoValra repo
-        run: |
-          rm -rf source-rovalra
-          git clone --depth 1 https://github.com/NotValra/RoValra.git source-rovalra
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: 'source-rovalra/package-lock.json'
-
-      - name: Install web-ext globally
-        run: npm install -g web-ext
-
-      - name: Check for upstream version changes
-        id: check_version
+      - name: Delete old releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          UPSTREAM_VER=$(node -p "require('./source-rovalra/package.json').version")
-          LATEST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//' || echo "none")
-          
-          BASE_RELEASE_VER=$(echo "$LATEST_RELEASE" | cut -d. -f1-3)
-          
-          if [ "$UPSTREAM_VER" == "$BASE_RELEASE_VER" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "No new upstream version ($UPSTREAM_VER). Skipping."
-            echo "SKIP=true" >> $GITHUB_OUTPUT
-          else
-            echo "Building version: $UPSTREAM_VER"
-            echo "SKIP=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Generate custom version
-        if: steps.check_version.outputs.SKIP != 'true'
-        id: generate_version
-        run: |
-          node -e '
-            const fs = require("fs");
-            const pkg = require("./source-rovalra/package.json");
-            
-            let cleanVer = pkg.version.replace(/[^0-9.]/g, "");
-            let parts = cleanVer.split(".").filter(Boolean);
-            if (parts.length > 3) {
-              parts = parts.slice(0, 3);
-            }
-            
-            let runNum = process.env.GITHUB_RUN_NUMBER || "1";
-            let uniqueVer = `${parts.join(".")}.${runNum}`;
-            
-            fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);
-            console.log(`Generated version: ${uniqueVer}`);
-          '
-
-      - name: Install dependencies & Build Firefox Extension
-        if: steps.check_version.outputs.SKIP != 'true'
-        run: |
-          cd source-rovalra
-          npm ci --legacy-peer-deps || npm install
-          node scripts/build-firefox.js || npm run build
-
-      - name: Prepare build files and patch manifest
-        if: steps.check_version.outputs.SKIP != 'true'
-        run: |
-          rm -rf ./extension ./release-assets ./web-ext-artifacts
-          cp -r source-rovalra/dist-firefox ./extension
-          
-          node -e '
-            const fs = require("fs");
-            const path = require("path");
-
-            const localesPath = "./extension/_locales";
-            if (fs.existsSync(localesPath)) {
-              const defaultEnPath = path.join(localesPath, "en");
-              if (!fs.existsSync(defaultEnPath)) {
-                const available = fs.readdirSync(localesPath);
-                const fallback = available.find(e => e.toLowerCase().startsWith("en"));
-                if (fallback) {
-                  fs.cpSync(path.join(localesPath, fallback), defaultEnPath, { recursive: true });
-                  console.log(`Created fallback _locales/en from ${fallback}`);
-                }
-              }
-            }
-
-            const manifestPath = "./extension/manifest.json";
-            if (!fs.existsSync(manifestPath)) {
-              console.error("Error: manifest.json not found at " + manifestPath);
-              process.exit(1);
-            }
-            
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-            const newVersion = process.env.VERSION;
-            
-            if (!newVersion) {
-              console.error("Error: VERSION environment variable is empty!");
-              process.exit(1);
-            }
-            
-            manifest.version = newVersion;
-            
-            manifest.browser_specific_settings = manifest.browser_specific_settings || {};
-            manifest.browser_specific_settings.gecko = {
-              id: "rovalra-custom-port@raviannaivar.com",
-              update_url: "https://raw.githubusercontent.com/raviannaivar/RVFFP/main/updates.json",
-              data_collection_permissions: {
-                required: ["none"]
-              }
-            };
-            
-            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-            console.log(`Successfully updated manifest.json to version ${newVersion}`);
-            
-            const rootManifestPath = "./manifest.json";
-            fs.writeFileSync(rootManifestPath, JSON.stringify(manifest, null, 2));
-            console.log(`Synced root manifest.json to version ${newVersion}`);
-          '
-          
-          cd extension && zip -r -q ../extension.zip ./* -x "*.DS_Store" "*.git*"
-
-      - name: Update updates.json
-        if: steps.check_version.outputs.SKIP != 'true'
-        run: |
-          node -e '
-            const fs = require("fs");
-            const updatesPath = "./updates.json";
-            const newVersion = process.env.VERSION;
-            const addonId = "rovalra-custom-port@raviannaivar.com";
-            const downloadUrl = "https://github.com/raviannaivar/RVFFP/releases/latest/download/rovalra.xpi";
-
-            let updatesData = { addons: {} };
-            if (fs.existsSync(updatesPath)) {
-              try {
-                updatesData = JSON.parse(fs.readFileSync(updatesPath, "utf8"));
-              } catch (e) {
-                console.error("Failed to parse existing updates.json, creating a new one.");
-              }
-            }
-
-            updatesData.addons = updatesData.addons || {};
-            updatesData.addons[addonId] = updatesData.addons[addonId] || { updates: [] };
-
-            updatesData.addons[addonId].updates = [
-              {
-                version: newVersion,
-                update_link: downloadUrl
-              }
-            ];
-
-            fs.writeFileSync(updatesPath, JSON.stringify(updatesData, null, 2));
-            console.log(`Successfully updated updates.json to version ${newVersion}`);
-          '
-
-      - name: Commit and push updates
-        if: steps.check_version.outputs.SKIP != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add updates.json manifest.json
-          git commit -m "update updates.json and manifest.json to v${{ env.VERSION }}" || echo "No changes to commit"
-          git pull --rebase origin main || true
-          git push origin main || echo "Nothing to push"
-
-      - name: Sign Extension with Mozilla (Unlisted)
-        if: steps.check_version.outputs.SKIP != 'true'
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-        run: |
-          web-ext sign \
-            --source-dir ./extension \
-            --api-key "$AMO_JWT_ISSUER" \
-            --api-secret "$AMO_JWT_SECRET" \
-            --channel unlisted \
-            --timeout 600000
-
-          mkdir -p ./release-assets
-          
-          XPI_FILE=$(ls web-ext-artifacts/*.xpi 2>/dev/null | head -n 1)
-          if [ -z "$XPI_FILE" ]; then
-            echo "Error: Signed .xpi file was not generated by web-ext."
-            exit 1
-          fi
-          
-          cp "$XPI_FILE" ./release-assets/rovalra.xpi
-          cp extension.zip ./release-assets/extension.zip
-
-      - name: Create GitHub Release
-        if: steps.check_version.outputs.SKIP != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ env.VERSION }}" ./release-assets/* \
-            --title "Release v${{ env.VERSION }}" \
-            --notes "extension version ${{ env.VERSION }}"
+          echo "Fetching releases..."
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | tail -n +6 | while read -r tag; do
+            echo "Deleting release $tag and its tag..."
+            gh release delete "$tag" --yes --cleanup-tag || true
+          done
+          echo "Cleanup complete."

@@ -97,19 +97,32 @@ jobs:
           node -e '
             const fs = require("fs");
             const manifestPath = "./extension/manifest.json";
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
             
-            manifest.version = process.env.VERSION;
-            manifest.browser_specific_settings = {
-              gecko: {
-                id: "rovalra-custom-port@raviannaivar.com",
-                data_collection_permissions: {
-                  required: ["none"]
-                }
+            if (!fs.existsSync(manifestPath)) {
+              console.error("Error: manifest.json not found at " + manifestPath);
+              process.exit(1);
+            }
+            
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+            const newVersion = process.env.VERSION;
+            
+            if (!newVersion) {
+              console.error("Error: VERSION environment variable is empty!");
+              process.exit(1);
+            }
+            
+            manifest.version = newVersion;
+            
+            manifest.browser_specific_settings = manifest.browser_specific_settings || {};
+            manifest.browser_specific_settings.gecko = {
+              id: "rovalra-custom-port@raviannaivar.com",
+              data_collection_permissions: {
+                required: ["none"]
               }
             };
             
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+            console.log(`Successfully updated manifest.json to version ${newVersion}`);
           '
           
           cd extension && zip -r -q ../extension.zip ./* -x "*.DS_Store" "*.git*"

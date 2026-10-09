@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "2.6.16.82",
+  "version": "2.6.16.85",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "browser_specific_settings": {
@@ -78,7 +78,7 @@
     "declarativeNetRequest",
     "storage",
     "scripting",
-    "contextMenus",
+    "menus",
     "webNavigation"
   ],
   "host_permissions": [

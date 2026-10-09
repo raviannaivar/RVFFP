@@ -29,11 +29,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'source-rovalra/package-lock.json'
 
       - name: Clone original RoValra repo
         run: |
           rm -rf source-rovalra
-          git clone https://github.com/NotValra/RoValra.git source-rovalra
+          git clone --depth 1 https://github.com/NotValra/RoValra.git source-rovalra
 
       - name: Check for upstream version changes
         id: check_version
@@ -68,7 +70,6 @@ jobs:
             }
             
             let runNum = process.env.GITHUB_RUN_NUMBER || "1";
-           
             let uniqueVer = `${parts.join(".")}.${runNum}`;
             
             fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${uniqueVer}\n`);
@@ -85,9 +86,13 @@ jobs:
       - name: Prepare build files and patch manifest
         if: steps.check_version.outputs.SKIP != 'true'
         run: |
-          rm -rf ./extension
+          rm -rf ./extension ./release-assets ./web-ext-artifacts
           cp -r source-rovalra/dist-firefox ./extension
           
+          find ./extension -type d \( -name "_locales" -o -name "locales" -o -name "lang" -o -name "languages" -o -name "i18n" \) | while read -r loc_dir; do
+            find "$loc_dir" -mindepth 1 -maxdepth 1 ! \(-name 'en*' -o -name 'eng*'\) -exec rm -rf {} +
+          done
+
           node -e '
             const fs = require("fs");
             const manifestPath = "./extension/manifest.json";
@@ -106,7 +111,7 @@ jobs:
             fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
           '
           
-          cd extension && zip -r ../extension.zip ./*
+          cd extension && zip -r -q ../extension.zip ./* -x "*.DS_Store" "*.git*"
 
       - name: Sign Extension with Mozilla (Unlisted)
         if: steps.check_version.outputs.SKIP != 'true'
@@ -121,7 +126,9 @@ jobs:
             --channel unlisted
 
           mkdir -p ./release-assets
-          cp web-ext-artifacts/*.xpi ./release-assets/rovalra.xpi
+          if [ -d "web-ext-artifacts" ] && [ "$(ls -A web-ext-artifacts/*.xpi 2>/devnull)" ]; then
+            cp web-ext-artifacts/*.xpi ./release-assets/rovalra.xpi
+          fi
           cp extension.zip ./release-assets/extension.zip
 
       - name: Create GitHub Release

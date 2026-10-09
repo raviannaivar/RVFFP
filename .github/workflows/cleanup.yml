@@ -24,7 +24,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          KEYS=$(gh api "repos/$REPO/actions/caches" --jq '.actions_caches[].key' 2>/devnull || true)
+          KEYS=$(gh api "repos/$REPO/actions/caches?per_page=100" --paginate --jq '.actions_caches[].key' 2>/devnull || true)
           for KEY in $KEYS; do
             echo "Deleting cache key: $KEY"
             gh api -X DELETE "repos/$REPO/actions/caches?key=$KEY" || true
@@ -73,7 +73,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          ARTIFACT_IDS=$(gh api "repos/$REPO/actions/artifacts" --jq '.artifacts[].id' 2>/devnull || true)
+          ARTIFACT_IDS=$(gh api "repos/$REPO/actions/artifacts?per_page=100" --paginate --jq '.artifacts[].id' 2>/devnull || true)
           for ID in $ARTIFACT_IDS; do
             echo "Deleting artifact ID: $ID"
             gh api -X DELETE "repos/$REPO/actions/artifacts/$ID" || true
